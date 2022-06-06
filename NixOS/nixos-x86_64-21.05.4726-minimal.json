@@ -1,0 +1,54 @@
+{
+  "variables": {
+    "disk_size": "10240",
+    "memory": "2048"
+  },
+  "builders": [
+    {
+      "boot_wait": "45s",
+      "boot_command": [
+        "echo http://{{ .HTTPIP }}:{{ .HTTPPort}} > .packer_http<enter>",
+        "mkdir -m 0700 .ssh<enter>",
+        "curl $(cat .packer_http)/installer_rsa.pub > .ssh/authorized_keys<enter>",
+        "sudo systemctl start sshd<enter>"
+      ],
+      "http_directory": "scripts",
+      "shutdown_command": "sudo shutdown -h now",
+      "ssh_private_key_file": "./scripts/installer_rsa",
+      "ssh_port": 22,
+      "ssh_username": "nixos",
+      "ssh_password": "",
+      "headless": true,
+      "type": "virtualbox-iso",
+      "iso_url": "https://releases.nixos.org/nixos/21.05/nixos-21.05.4726.530a53dcbc9/nixos-minimal-21.05.4726.530a53dcbc9-x86_64-linux.iso",
+      "iso_checksum": "01a84c639dbb00a5b198ae961e9027149a54dbfa83b0404a798e4a872cdd9e7b",
+      "iso_checksum_type": "sha256",
+      "guest_additions_mode": "disable",
+      "format": "ova",
+      "guest_os_type": "Linux_64",
+      "disk_size": "{{ user `disk_size` }}",
+      "vboxmanage": [
+        [ "modifyvm", "{{.Name}}",
+            "--memory", "{{ user `memory` }}",
+            "--vram", "128",
+            "--clipboard", "bidirectional"
+        ]
+      ]
+    }
+  ],
+  "provisioners": [
+    {
+      "execute_command": "sudo su -c '{{ .Vars }} {{.Path}}'",
+      "type": "shell",
+      "script": "./scripts/install.sh"
+    }
+  ],
+  "post-processors": [
+    [
+      {
+        "type": "vagrant",
+        "output": "nixos-21.05-{{.Provider}}-x86_64.box"
+      }
+    ]
+  ]
+}
